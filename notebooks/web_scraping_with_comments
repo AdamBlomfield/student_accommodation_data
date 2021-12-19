@@ -1,0 +1,1609 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "306b2a0f",
+   "metadata": {},
+   "source": [
+    "# Notebook Overview "
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "a4adde52",
+   "metadata": {},
+   "source": [
+    "Project Steps:\n",
+    "\n",
+    "* Blank DataFrame to be populated\n",
+    "* Scrape relevant Data\n",
+    "* Populate DataFrame"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "e00051e6",
+   "metadata": {},
+   "source": [
+    "# Install Libraries"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "id": "228f1788",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2021-12-12T09:47:07.236006Z",
+     "start_time": "2021-12-12T09:47:05.969931Z"
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Requirement already satisfied: BeautifulSoup4 in /Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages (4.10.0)\r\n",
+      "Requirement already satisfied: soupsieve>1.2 in /Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages (from BeautifulSoup4) (2.3.1)\r\n"
+     ]
+    }
+   ],
+   "source": [
+    "!pip install BeautifulSoup4"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "id": "f4710a46",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2021-12-12T09:47:08.198652Z",
+     "start_time": "2021-12-12T09:47:07.237664Z"
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Requirement already satisfied: requests in /Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages (2.26.0)\r\n",
+      "Requirement already satisfied: certifi>=2017.4.17 in /Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages (from requests) (2020.6.20)\r\n",
+      "Requirement already satisfied: charset-normalizer~=2.0.0 in /Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages (from requests) (2.0.9)\r\n",
+      "Requirement already satisfied: idna<4,>=2.5 in /Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages (from requests) (2.10)\r\n",
+      "Requirement already satisfied: urllib3<1.27,>=1.21.1 in /Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages (from requests) (1.25.11)\r\n"
+     ]
+    }
+   ],
+   "source": [
+    "!pip install requests"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "af368928",
+   "metadata": {},
+   "source": [
+    "# Import Libraries"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "id": "aca8d295",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2021-12-12T09:47:08.796045Z",
+     "start_time": "2021-12-12T09:47:08.201928Z"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "# DataFrame\n",
+    "import pandas as pd\n",
+    "\n",
+    "# Webscraping\n",
+    "from bs4 import BeautifulSoup as bs\n",
+    "import requests"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "96053b0b",
+   "metadata": {},
+   "source": [
+    "# Blank Pandas DataFrame"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "id": "1a71cd77",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2021-12-12T09:47:08.801353Z",
+     "start_time": "2021-12-12T09:47:08.798108Z"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "# Column headings to be used in DataFrame\n",
+    "cols = ['Property', 'Owner / Operator', 'Type', 'Rent pw',\n",
+    "        'Rent pcm', 'Rent pa', 'Weeks', 'Area sqm', 'Area sqft',\n",
+    "        '£psf pa', 'Address', 'url']"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "id": "c3f809ae",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2021-12-12T09:47:08.812487Z",
+     "start_time": "2021-12-12T09:47:08.803417Z"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "# Initial DataFrame to scrape the URLs\n",
+    "df_urls = pd.DataFrame(columns=['Property', 'url'])\n",
+    "\n",
+    "# Master DataFrame to be populated\n",
+    "df = pd.DataFrame(columns=cols)\n",
+    "\n",
+    "# Temporary DataFrame to be populated, added to Master DF then cleared\n",
+    "df2 = pd.DataFrame(columns=cols)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "d7b79be6",
+   "metadata": {},
+   "source": [
+    "# Scrape"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "bf9f85c6",
+   "metadata": {},
+   "source": [
+    "* Scrape Data:\n",
+    "    * Request HTML from [My Student Halls](https://www.mystudenthalls.com/) site\n",
+    "    * Scrape for Property, Owner/Operator, Address, Link URL\n",
+    "    * Scrape for 1 x Type, Rent (p/w vs pcm), weeks\n",
+    "    * Scrape for N x (Type, Rent (p/w vs pcm), weeks)\n",
+    "    * Scrape for Area (sqm vs sqft)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "id": "845fcc22",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2021-12-12T09:47:08.816871Z",
+     "start_time": "2021-12-12T09:47:08.814072Z"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "# To be filled in by user\n",
+    "# university = input()\n",
+    "university = 'leeds'"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "id": "5bf883e6",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2021-12-12T09:47:08.821233Z",
+     "start_time": "2021-12-12T09:47:08.818428Z"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "url_home = 'https://www.mystudenthalls.com/?s=' + university"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "id": "de4c7ed7",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2021-12-12T09:47:10.263238Z",
+     "start_time": "2021-12-12T09:47:08.823171Z"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "# Make a get request to retrieve the page\n",
+    "html_page = requests.get(url_home)\n",
+    "\n",
+    "# Pass the page contents to beautiful soup for parsing\n",
+    "soup = bs(html_page.text, 'html.parser')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "5c842c18",
+   "metadata": {},
+   "source": [
+    "## Property Names"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "id": "f2043866",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2021-12-12T09:47:10.285751Z",
+     "start_time": "2021-12-12T09:47:10.265439Z"
+    }
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "<div class=\"listing-detail\">\n",
+       "<h3><strong>Leeds •</strong> Fresh </h3>\n",
+       "<h2><a href=\"https://www.mystudenthalls.com/student-accommodation/leeds/the-refinery/\">The Refinery</a></h2>\n",
+       "<div class=\"listing-price-holder\">\n",
+       "<a href=\"https://www.mystudenthalls.com/student-accommodation/leeds/the-refinery/\">\n",
+       "<span>Rooms from</span>\n",
+       "<span class=\"listing-price\"><span><em>£159<span class=\"pence\">.00</span></em> Per Week</span></span>\n",
+       "</a>\n",
+       "</div>\n",
+       "<div class=\"shortlist-indicator\">\n",
+       "<a class=\"add-to-shortlist\" data-action=\"add_quick_contact\" data-id=\"38589\" data-price=\"£159.00\" data-title=\"The Refinery\" href=\"\"><span class=\"letter icon sprite\"></span>Add to Shortlist</a>\n",
+       "</div>\n",
+       "</div>"
+      ]
+     },
+     "execution_count": 9,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "# Retreive all property names\n",
+    "all_properties = soup.find_all('div', class_='listing-detail')\n",
+    "property_one = all_properties[0] \n",
+    "\n",
+    "# Show the first example\n",
+    "property_one "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "id": "5d1c728b",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2021-12-12T09:47:10.290833Z",
+     "start_time": "2021-12-12T09:47:10.287337Z"
+    },
+    "scrolled": true
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "'The Refinery'"
+      ]
+     },
+     "execution_count": 10,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "# Name of first property\n",
+    "property_one.find(\"h2\").get_text()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "id": "d617d6a5",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2021-12-12T09:47:10.306255Z",
+     "start_time": "2021-12-12T09:47:10.296049Z"
+    }
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>Property</th>\n",
+       "      <th>url</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>The Refinery</td>\n",
+       "      <td>NaN</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>Burley Road</td>\n",
+       "      <td>NaN</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "       Property  url\n",
+       "0  The Refinery  NaN\n",
+       "1   Burley Road  NaN"
+      ]
+     },
+     "execution_count": 11,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "# Names of all properties\n",
+    "property_names = []\n",
+    "for property_ in list(range(len(all_properties))):\n",
+    "    # Scrape the name of the nth property\n",
+    "    property_name = all_properties[property_].find(\"h2\").get_text()\n",
+    "    # Add property name to the list of property names\n",
+    "    property_names.append(property_name)\n",
+    "    \n",
+    "# Add property names to DataFrame\n",
+    "df_urls['Property'] = property_names\n",
+    "\n",
+    "# Preview the DataFrame\n",
+    "df_urls.head(2)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "510449b5",
+   "metadata": {},
+   "source": [
+    "## URLs"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "id": "468f3b3a",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2021-12-12T09:47:10.311965Z",
+     "start_time": "2021-12-12T09:47:10.307469Z"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "# Create a list of the property url links\n",
+    "links = []\n",
+    "for property_ in list(range(len(all_properties))):\n",
+    "    link = all_properties[property_].h2.a['href']\n",
+    "    links.append(link)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 13,
+   "id": "4697df80",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2021-12-12T09:47:10.324047Z",
+     "start_time": "2021-12-12T09:47:10.314703Z"
+    }
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>Property</th>\n",
+       "      <th>url</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>The Refinery</td>\n",
+       "      <td>https://www.mystudenthalls.com/student-accommo...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>Burley Road</td>\n",
+       "      <td>https://www.mystudenthalls.com/student-accommo...</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "       Property                                                url\n",
+       "0  The Refinery  https://www.mystudenthalls.com/student-accommo...\n",
+       "1   Burley Road  https://www.mystudenthalls.com/student-accommo..."
+      ]
+     },
+     "execution_count": 13,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "# Populate DataFrame for URLs    \n",
+    "df_urls['url'] = links\n",
+    "\n",
+    "# Preview DataFrame\n",
+    "df_urls.head(2)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "1579a86c",
+   "metadata": {},
+   "source": [
+    "## Owner/Operator"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 14,
+   "id": "a1ab6ebb",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2021-12-12T09:47:10.937293Z",
+     "start_time": "2021-12-12T09:47:10.325761Z"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "n = 0\n",
+    "\n",
+    "# nth property\n",
+    "url = df_urls['url'][n]\n",
+    "\n",
+    "# Make a get request to retrieve the page\n",
+    "html_page = requests.get(url)\n",
+    "\n",
+    "# Pass the page contents to beautiful soup for parsing\n",
+    "soup = bs(html_page.text, 'html.parser')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 15,
+   "id": "6e0522dc",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2021-12-12T09:47:10.944784Z",
+     "start_time": "2021-12-12T09:47:10.939311Z"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "# Scrape the Owner/Operator name\n",
+    "owner = soup.findAll('aside', attrs={'id':'sidebar-detail'})\n",
+    "owner = owner[0].h2.text\n",
+    "\n",
+    "df2['Owner / Operator'] = owner"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 16,
+   "id": "8e76e99f",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2021-12-12T09:47:10.955237Z",
+     "start_time": "2021-12-12T09:47:10.946790Z"
+    }
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>Property</th>\n",
+       "      <th>Owner / Operator</th>\n",
+       "      <th>Type</th>\n",
+       "      <th>Rent pw</th>\n",
+       "      <th>Rent pcm</th>\n",
+       "      <th>Rent pa</th>\n",
+       "      <th>Weeks</th>\n",
+       "      <th>Area sqm</th>\n",
+       "      <th>Area sqft</th>\n",
+       "      <th>£psf pa</th>\n",
+       "      <th>Address</th>\n",
+       "      <th>url</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "Empty DataFrame\n",
+       "Columns: [Property, Owner / Operator, Type, Rent pw, Rent pcm, Rent pa, Weeks, Area sqm, Area sqft, £psf pa, Address, url]\n",
+       "Index: []"
+      ]
+     },
+     "execution_count": 16,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "df2.head(2)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "a8fdbcc0",
+   "metadata": {},
+   "source": [
+    "## Type "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 17,
+   "id": "68405aeb",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2021-12-12T09:47:10.963284Z",
+     "start_time": "2021-12-12T09:47:10.956798Z"
+    }
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "'Bronze En Suite'"
+      ]
+     },
+     "execution_count": 17,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "rooms = soup.findAll('p', attrs={'class':'room_title'})\n",
+    "rooms[0].text"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 18,
+   "id": "e49be06d",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2021-12-12T09:47:10.969018Z",
+     "start_time": "2021-12-12T09:47:10.964943Z"
+    }
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "['Bronze En Suite',\n",
+       " 'Bronze En Suite',\n",
+       " 'Silver En Suite',\n",
+       " 'Silver En Suite',\n",
+       " 'Gold En Suite',\n",
+       " 'Gold En Suite',\n",
+       " 'Platinum En Suite',\n",
+       " 'Platinum En Suite',\n",
+       " 'Bronze Studio',\n",
+       " 'Silver Studio',\n",
+       " 'Gold Studio',\n",
+       " 'Platinum Studio',\n",
+       " '2021-22 Rooms']"
+      ]
+     },
+     "execution_count": 18,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "types = []\n",
+    "for room_num in list(range(len(rooms))):\n",
+    "    types.append(rooms[room_num].text)\n",
+    "types"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 19,
+   "id": "73bbbd28",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2021-12-12T09:47:10.975104Z",
+     "start_time": "2021-12-12T09:47:10.970644Z"
+    }
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "'The Refinery'"
+      ]
+     },
+     "execution_count": 19,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "df_urls['Property'][n]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 20,
+   "id": "b03045d8",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2021-12-12T09:47:10.988196Z",
+     "start_time": "2021-12-12T09:47:10.978016Z"
+    }
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>Property</th>\n",
+       "      <th>Type</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>The Refinery</td>\n",
+       "      <td>Bronze En Suite</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>The Refinery</td>\n",
+       "      <td>Bronze En Suite</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "       Property             Type\n",
+       "0  The Refinery  Bronze En Suite\n",
+       "1  The Refinery  Bronze En Suite"
+      ]
+     },
+     "execution_count": 20,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "df2 = pd.DataFrame(columns=['Property', 'Type'])\n",
+    "# Add room types to dataframe\n",
+    "df2['Type'] = types\n",
+    "# Fill Property name\n",
+    "df2['Property'] = df_urls['Property'][n]\n",
+    "df2.head(2)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "bf262f2c",
+   "metadata": {},
+   "source": [
+    "## Rent PA"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 21,
+   "id": "8949c4b8",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2021-12-12T09:47:10.998502Z",
+     "start_time": "2021-12-12T09:47:10.990492Z"
+    }
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "[7436,\n",
+       " 8364,\n",
+       " 7524,\n",
+       " 8466,\n",
+       " 7656,\n",
+       " 8619,\n",
+       " 7832,\n",
+       " 7612,\n",
+       " 10710,\n",
+       " 10965,\n",
+       " 11220,\n",
+       " 11475,\n",
+       " 6996]"
+      ]
+     },
+     "execution_count": 21,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "# Gather HTML that contains info we need for Rent PA\n",
+    "rents_pa = soup.findAll('li', attrs={'class':'tenancy'})\n",
+    "\n",
+    "# Blank list to gather the different rents PA\n",
+    "rent_pa = []\n",
+    "\n",
+    "# For each room, add the rent price to the blank list above\n",
+    "for rent_pa_num in list(range(len(rents_pa))):\n",
+    "    room_rent = rents_pa[rent_pa_num].text\n",
+    "    rent_pa.append(int(room_rent[13:-3].replace(',','')))\n",
+    "    \n",
+    "rent_pa"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 22,
+   "id": "42bf5aff",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2021-12-12T09:47:11.003446Z",
+     "start_time": "2021-12-12T09:47:11.000261Z"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "# Add Rent PA to our DataFrame\n",
+    "df2['Rent pa'] = rent_pa"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 23,
+   "id": "337a1dee",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2021-12-12T09:47:11.015104Z",
+     "start_time": "2021-12-12T09:47:11.005430Z"
+    },
+    "scrolled": true
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>Property</th>\n",
+       "      <th>Type</th>\n",
+       "      <th>Rent pa</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>The Refinery</td>\n",
+       "      <td>Bronze En Suite</td>\n",
+       "      <td>7436</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>The Refinery</td>\n",
+       "      <td>Bronze En Suite</td>\n",
+       "      <td>8364</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "       Property             Type  Rent pa\n",
+       "0  The Refinery  Bronze En Suite     7436\n",
+       "1  The Refinery  Bronze En Suite     8364"
+      ]
+     },
+     "execution_count": 23,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "df2.head(2)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "d25a9321",
+   "metadata": {},
+   "source": [
+    "## Weeks"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 24,
+   "id": "f013e715",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2021-12-12T09:47:11.024446Z",
+     "start_time": "2021-12-12T09:47:11.017410Z"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "# Gather HTML that contains info we need for Weeks\n",
+    "weeks_data = soup.findAll('li', attrs={'class':'availability'})"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 25,
+   "id": "b3e3a934",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2021-12-12T09:47:11.030384Z",
+     "start_time": "2021-12-12T09:47:11.026330Z"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "weeks = []\n",
+    "for n in list(range(len(weeks_data)))[1::2]: #availablity tag also returns good/limited info of room, so we only want every other one\n",
+    "    # add only the number of weeks to the list\n",
+    "    weeks.append(int(weeks_data[n].text[-2:]))\n",
+    "\n",
+    "# Add number of weeks to the dataframe    \n",
+    "df2['Weeks'] = weeks"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 26,
+   "id": "d415c31e",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2021-12-12T09:47:11.038919Z",
+     "start_time": "2021-12-12T09:47:11.032174Z"
+    },
+    "scrolled": true
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>Property</th>\n",
+       "      <th>Type</th>\n",
+       "      <th>Rent pa</th>\n",
+       "      <th>Weeks</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>The Refinery</td>\n",
+       "      <td>Bronze En Suite</td>\n",
+       "      <td>7436</td>\n",
+       "      <td>44</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>The Refinery</td>\n",
+       "      <td>Bronze En Suite</td>\n",
+       "      <td>8364</td>\n",
+       "      <td>51</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "       Property             Type  Rent pa  Weeks\n",
+       "0  The Refinery  Bronze En Suite     7436     44\n",
+       "1  The Refinery  Bronze En Suite     8364     51"
+      ]
+     },
+     "execution_count": 26,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "df2.head(2)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "1d5a15f8",
+   "metadata": {},
+   "source": [
+    "### Rent pw"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 27,
+   "id": "5fed6fe5",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2021-12-12T09:47:11.053555Z",
+     "start_time": "2021-12-12T09:47:11.040658Z"
+    }
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>Property</th>\n",
+       "      <th>Type</th>\n",
+       "      <th>Rent pa</th>\n",
+       "      <th>Weeks</th>\n",
+       "      <th>Rent pw</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>The Refinery</td>\n",
+       "      <td>Bronze En Suite</td>\n",
+       "      <td>7436</td>\n",
+       "      <td>44</td>\n",
+       "      <td>169.0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>The Refinery</td>\n",
+       "      <td>Bronze En Suite</td>\n",
+       "      <td>8364</td>\n",
+       "      <td>51</td>\n",
+       "      <td>164.0</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "       Property             Type  Rent pa  Weeks  Rent pw\n",
+       "0  The Refinery  Bronze En Suite     7436     44    169.0\n",
+       "1  The Refinery  Bronze En Suite     8364     51    164.0"
+      ]
+     },
+     "execution_count": 27,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "df2['Rent pw'] = df2['Rent pa'] / df2['Weeks']\n",
+    "df2.head(2)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "bf7cafc8",
+   "metadata": {},
+   "source": [
+    "### Rent pcm"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 28,
+   "id": "3dc61509",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2021-12-12T09:47:11.066455Z",
+     "start_time": "2021-12-12T09:47:11.056153Z"
+    }
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>Property</th>\n",
+       "      <th>Type</th>\n",
+       "      <th>Rent pa</th>\n",
+       "      <th>Weeks</th>\n",
+       "      <th>Rent pw</th>\n",
+       "      <th>Rent pcm</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>The Refinery</td>\n",
+       "      <td>Bronze En Suite</td>\n",
+       "      <td>7436</td>\n",
+       "      <td>44</td>\n",
+       "      <td>169.0</td>\n",
+       "      <td>619.666667</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>The Refinery</td>\n",
+       "      <td>Bronze En Suite</td>\n",
+       "      <td>8364</td>\n",
+       "      <td>51</td>\n",
+       "      <td>164.0</td>\n",
+       "      <td>697.000000</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "       Property             Type  Rent pa  Weeks  Rent pw    Rent pcm\n",
+       "0  The Refinery  Bronze En Suite     7436     44    169.0  619.666667\n",
+       "1  The Refinery  Bronze En Suite     8364     51    164.0  697.000000"
+      ]
+     },
+     "execution_count": 28,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "df2['Rent pcm'] = df2['Rent pa'] / 12\n",
+    "df2.head(2)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "6b737cad",
+   "metadata": {},
+   "source": [
+    "## Address"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 29,
+   "id": "41f38c81",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2021-12-12T09:47:11.076675Z",
+     "start_time": "2021-12-12T09:47:11.068173Z"
+    }
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "'Bingley Street, Leeds, Leeds, LS3 1BZ'"
+      ]
+     },
+     "execution_count": 29,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "# Gather HTML that contains info we need for Address\n",
+    "address_data = soup.findAll('div', attrs={'class':'inner'})\n",
+    "address_data[5].h3.text[9:]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 30,
+   "id": "381bdb54",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2021-12-12T09:47:11.091067Z",
+     "start_time": "2021-12-12T09:47:11.078629Z"
+    }
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>Property</th>\n",
+       "      <th>Type</th>\n",
+       "      <th>Rent pa</th>\n",
+       "      <th>Weeks</th>\n",
+       "      <th>Rent pw</th>\n",
+       "      <th>Rent pcm</th>\n",
+       "      <th>Address</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>The Refinery</td>\n",
+       "      <td>Bronze En Suite</td>\n",
+       "      <td>7436</td>\n",
+       "      <td>44</td>\n",
+       "      <td>169.0</td>\n",
+       "      <td>619.666667</td>\n",
+       "      <td>Bingley Street, Leeds, Leeds, LS3 1BZ</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>The Refinery</td>\n",
+       "      <td>Bronze En Suite</td>\n",
+       "      <td>8364</td>\n",
+       "      <td>51</td>\n",
+       "      <td>164.0</td>\n",
+       "      <td>697.000000</td>\n",
+       "      <td>Bingley Street, Leeds, Leeds, LS3 1BZ</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "       Property             Type  Rent pa  Weeks  Rent pw    Rent pcm  \\\n",
+       "0  The Refinery  Bronze En Suite     7436     44    169.0  619.666667   \n",
+       "1  The Refinery  Bronze En Suite     8364     51    164.0  697.000000   \n",
+       "\n",
+       "                                 Address  \n",
+       "0  Bingley Street, Leeds, Leeds, LS3 1BZ  \n",
+       "1  Bingley Street, Leeds, Leeds, LS3 1BZ  "
+      ]
+     },
+     "execution_count": 30,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "df2['Address'] = address_data[5].h3.text[9:]\n",
+    "df2.head(2)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "5cf678a1",
+   "metadata": {},
+   "source": [
+    "## URL"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 31,
+   "id": "5133aa56",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2021-12-12T09:47:11.103464Z",
+     "start_time": "2021-12-12T09:47:11.093796Z"
+    }
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>Property</th>\n",
+       "      <th>Type</th>\n",
+       "      <th>Rent pa</th>\n",
+       "      <th>Weeks</th>\n",
+       "      <th>Rent pw</th>\n",
+       "      <th>Rent pcm</th>\n",
+       "      <th>Address</th>\n",
+       "      <th>url</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>The Refinery</td>\n",
+       "      <td>Bronze En Suite</td>\n",
+       "      <td>7436</td>\n",
+       "      <td>44</td>\n",
+       "      <td>169.0</td>\n",
+       "      <td>619.666667</td>\n",
+       "      <td>Bingley Street, Leeds, Leeds, LS3 1BZ</td>\n",
+       "      <td>https://www.mystudenthalls.com/student-accommo...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>The Refinery</td>\n",
+       "      <td>Bronze En Suite</td>\n",
+       "      <td>8364</td>\n",
+       "      <td>51</td>\n",
+       "      <td>164.0</td>\n",
+       "      <td>697.000000</td>\n",
+       "      <td>Bingley Street, Leeds, Leeds, LS3 1BZ</td>\n",
+       "      <td>https://www.mystudenthalls.com/student-accommo...</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "       Property             Type  Rent pa  Weeks  Rent pw    Rent pcm  \\\n",
+       "0  The Refinery  Bronze En Suite     7436     44    169.0  619.666667   \n",
+       "1  The Refinery  Bronze En Suite     8364     51    164.0  697.000000   \n",
+       "\n",
+       "                                 Address  \\\n",
+       "0  Bingley Street, Leeds, Leeds, LS3 1BZ   \n",
+       "1  Bingley Street, Leeds, Leeds, LS3 1BZ   \n",
+       "\n",
+       "                                                 url  \n",
+       "0  https://www.mystudenthalls.com/student-accommo...  \n",
+       "1  https://www.mystudenthalls.com/student-accommo...  "
+      ]
+     },
+     "execution_count": 31,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "df2['url'] = url\n",
+    "df2.head(2)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "76d54b6d",
+   "metadata": {},
+   "source": [
+    "# Function to repeat making df2 and combine them all"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 32,
+   "id": "7ef373f3",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2021-12-12T09:47:11.116431Z",
+     "start_time": "2021-12-12T09:47:11.105742Z"
+    }
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>Property</th>\n",
+       "      <th>Type</th>\n",
+       "      <th>Rent pa</th>\n",
+       "      <th>Weeks</th>\n",
+       "      <th>Rent pw</th>\n",
+       "      <th>Rent pcm</th>\n",
+       "      <th>Address</th>\n",
+       "      <th>url</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>The Refinery</td>\n",
+       "      <td>Bronze En Suite</td>\n",
+       "      <td>7436</td>\n",
+       "      <td>44</td>\n",
+       "      <td>169.0</td>\n",
+       "      <td>619.666667</td>\n",
+       "      <td>Bingley Street, Leeds, Leeds, LS3 1BZ</td>\n",
+       "      <td>https://www.mystudenthalls.com/student-accommo...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>The Refinery</td>\n",
+       "      <td>Bronze En Suite</td>\n",
+       "      <td>8364</td>\n",
+       "      <td>51</td>\n",
+       "      <td>164.0</td>\n",
+       "      <td>697.000000</td>\n",
+       "      <td>Bingley Street, Leeds, Leeds, LS3 1BZ</td>\n",
+       "      <td>https://www.mystudenthalls.com/student-accommo...</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "       Property             Type  Rent pa  Weeks  Rent pw    Rent pcm  \\\n",
+       "0  The Refinery  Bronze En Suite     7436     44    169.0  619.666667   \n",
+       "1  The Refinery  Bronze En Suite     8364     51    164.0  697.000000   \n",
+       "\n",
+       "                                 Address  \\\n",
+       "0  Bingley Street, Leeds, Leeds, LS3 1BZ   \n",
+       "1  Bingley Street, Leeds, Leeds, LS3 1BZ   \n",
+       "\n",
+       "                                                 url  \n",
+       "0  https://www.mystudenthalls.com/student-accommo...  \n",
+       "1  https://www.mystudenthalls.com/student-accommo...  "
+      ]
+     },
+     "execution_count": 32,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "df2.head(2)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "38b1f5de",
+   "metadata": {},
+   "source": [
+    "# Save master df to a csv file"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "b9f5d20b",
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3 (ipykernel)",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.8.5"
+  },
+  "toc": {
+   "base_numbering": 1,
+   "nav_menu": {},
+   "number_sections": true,
+   "sideBar": true,
+   "skip_h1_title": false,
+   "title_cell": "Table of Contents",
+   "title_sidebar": "Contents",
+   "toc_cell": false,
+   "toc_position": {},
+   "toc_section_display": true,
+   "toc_window_display": false
+  },
+  "varInspector": {
+   "cols": {
+    "lenName": 16,
+    "lenType": 16,
+    "lenVar": 40
+   },
+   "kernels_config": {
+    "python": {
+     "delete_cmd_postfix": "",
+     "delete_cmd_prefix": "del ",
+     "library": "var_list.py",
+     "varRefreshCmd": "print(var_dic_list())"
+    },
+    "r": {
+     "delete_cmd_postfix": ") ",
+     "delete_cmd_prefix": "rm(",
+     "library": "var_list.r",
+     "varRefreshCmd": "cat(var_dic_list()) "
+    }
+   },
+   "types_to_exclude": [
+    "module",
+    "function",
+    "builtin_function_or_method",
+    "instance",
+    "_Feature"
+   ],
+   "window_display": false
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}
