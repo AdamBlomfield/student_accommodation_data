@@ -1,7 +1,10 @@
 # Project Brief
 
-* Client is a Real Estate Analysts who collects studnet accommodation data using a manual method, of browsing, copying and pasting to a spreadsheet.  
+* Client is a Real Estate Analysts who collects student accommodation data using a manual method, of browsing, copying and pasting to a spreadsheet.  
 * By using Python we can automate the process, saving significant time.
+* Tools Used:
+    * Pandas
+    * Beautiful Soup (Web Scraping)
 
 ## Current Client Method (Manual)
 * Prone to human error
