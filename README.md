@@ -1,25 +1,15 @@
 # Project Brief
-Data needed on student accomodation, from rent prices, to size.  Many hours spent manually copying the data down into an excel file to analyse.  Would be great if it could be automated.  
 
-Project Steps:
-* Create blank pandas df to be populated
-* Scrape Data:
-    * Request HTML from Student Accommodation (https://www.mystudenthalls.com/) site
-    * Scrape for Property, Owner/Operator, Address, Link URL
-    * Scrape for 1 x Type, Rent (p/w vs pcm), weeks
-    * Scrape for N x (Type, Rent (p/w vs pcm), weeks)
-    * Scrape for Area (sqm vs sqft)
-* Populate Pandas DF
-* Calculate
-    * Rent PA
-    * £psf PA
-* Create form to choose uni and returns csv file with data on.
+* Client is a Real Estate Analysts who collects studnet accommodation data using a manual method, of browsing, copying and pasting to a spreadsheet.  
+* By using Python we can automate the process, saving significant time.
 
-https://youtu.be/bFKfXn6uEKA
-
+## Current Client Method (Manual)
+* Prone to human error
+* Takes ~1 minute to collect data for 1 student accommodation
 
 [![manual](https://res.cloudinary.com/marcomontalbano/image/upload/v1641211930/video_to_markdown/images/youtube--bFKfXn6uEKA-c05b58ac6eb4c4700831b2b3070cd403.jpg)](https://youtu.be/bFKfXn6uEKA "manual")
 
-<video width="320" height="240" controls>
-  <source src="media/manual_data_collection.mov" type="video/mov">
-</video>
+## New Method (Automated)
+* Takes ~1 minute to collect data on 1000 student accommodations
+
+[![automatic](https://res.cloudinary.com/marcomontalbano/image/upload/v1641212505/video_to_markdown/images/youtube--Hjh5X8jUz2s-c05b58ac6eb4c4700831b2b3070cd403.jpg)](https://youtu.be/Hjh5X8jUz2s "automatic")
