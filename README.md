@@ -15,3 +15,6 @@ Project Steps:
     * £psf PA
 * Create form to choose uni and returns csv file with data on.
 
+<video width="320" height="240" controls>
+  <source src="../media/manual_data_collection.mov" type="video/mp4">
+</video>
