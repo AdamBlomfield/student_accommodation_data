@@ -15,6 +15,11 @@ Project Steps:
     * £psf PA
 * Create form to choose uni and returns csv file with data on.
 
+https://youtu.be/bFKfXn6uEKA
+
+
+[![manual](https://res.cloudinary.com/marcomontalbano/image/upload/v1641211930/video_to_markdown/images/youtube--bFKfXn6uEKA-c05b58ac6eb4c4700831b2b3070cd403.jpg)](https://youtu.be/bFKfXn6uEKA "manual")
+
 <video width="320" height="240" controls>
-  <source src="media/manual_data_collection.mov" type="video/mp4">
+  <source src="media/manual_data_collection.mov" type="video/mov">
 </video>
